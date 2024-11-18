@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Age Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e2030, #2d3250);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 2.5rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .input-box {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="date"] {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            background: #4ecdc4;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #45b7d1;
+            transform: translateY(-2px);
+        }
+
+        #result {
+            text-align: center;
+            font-size: 1.5rem;
+            min-height: 60px;
+            padding: 1rem;
+        }
+
+        .floating-div {
+            position: absolute;
+            pointer-events: none;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        @keyframes floatAndFade {
+            0% {
+                opacity: 0.8;
+                transform: scale(1) translate(0, 0);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(0.3) translate(var(--moveX), var(--moveY));
+            }
+        }
+
+        .age-number {
+            position: relative;
+            display: inline-block;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .age-number:hover {
+            color: #4ecdc4;
+            transform: scale(1.1);
+        }
+
+        /* Add a class for the container when particles are enabled */
+        .particles-enabled {
+            transition: all 0.3s ease;
+        }
+
+        .particles-enabled::after {
+            content: '✨ Move mouse to create particles ✨';
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            opacity: 0.7;
+            animation: fadeInOut 2s ease-in-out infinite;
+        }
+
+        @keyframes fadeInOut {
+
+            0%,
+            100% {
+                opacity: 0.7;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="interactive-container">
+        <h1>Age Visualizer</h1>
+        <div class="input-box">
+            <input type="date" id="date">
+            <button onclick="calculateAge()">Visualize Age</button>
+        </div>
+        <p id="result"></p>
+    </div>
+
+    <script>
+        let userInput = document.getElementById("date");
+        userInput.max = new Date().toISOString().split("T")[0];
+        let particlesEnabled = false;
+
+        function throttle(callback, delay) {
+            let lastExecutionTime = 0;
+            return function (...args) {
+                const now = Date.now();
+                if (now - lastExecutionTime >= delay) {
+                    callback.apply(this, args);
+                    lastExecutionTime = now;
+                }
+            };
+        }
+
+        function createParticle(x, y, color) {
+            if (!particlesEnabled) return;  // Only create particles if enabled
+
+            const particle = document.createElement('div');
+            particle.className = 'floating-div';
+
+            const size = Math.random() * 20 + 10;
+            const moveX = (Math.random() - 0.5) * 200;
+            const moveY = (Math.random() - 0.5) * 200;
+
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            particle.style.backgroundColor = color;
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.setProperty('--moveX', `${moveX}px`);
+            particle.style.setProperty('--moveY', `${moveY}px`);
+
+            document.body.appendChild(particle);
+
+            particle.style.animation = 'floatAndFade 1.5s ease-out forwards';
+
+            setTimeout(() => particle.remove(), 1500);
+        }
+
+        function enableParticles() {
+            particlesEnabled = true;
+            const container = document.getElementById('interactive-container');
+            container.classList.add('particles-enabled');
+
+            // Add particle effects
+            container.addEventListener('mousemove', handleMouseMove);
+        }
+
+        const handleMouseMove = throttle((e) => {
+            if (!particlesEnabled) return;
+
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1'];
+            createParticle(
+                e.clientX,
+                e.clientY,
+                colors[Math.floor(Math.random() * colors.length)]
+            );
+        }, 50);
+
+        function calculateAge() {
+            let birthDate = new Date(userInput.value);
+            if (!userInput.value) {
+                document.getElementById('result').textContent = "Please select a date first!";
+                return;
+            }
+
+            let today = new Date();
+
+            let y1 = birthDate.getFullYear();
+            let m1 = birthDate.getMonth() + 1;
+            let d1 = birthDate.getDate();
+
+            let y2 = today.getFullYear();
+            let m2 = today.getMonth() + 1;
+            let d2 = today.getDate();
+
+            let y3, m3, d3;
+            y3 = y2 - y1;
+
+            if (m2 >= m1) {
+                m3 = m2 - m1;
+            } else {
+                y3--;
+                m3 = 12 + m2 - m1;
+            }
+
+            if (d2 >= d1) {
+                d3 = d2 - d1;
+            } else {
+                m3--;
+                d3 = getDaysInMonth(y1, m1) + d2 - d1;
+                if (m3 < 0) {
+                    m3 = 11;
+                    y3--;
+                }
+            }
+
+            // Create interactive spans for each number
+            const resultHTML = `
+                <span class="age-number" data-value="${y3}" style="color: #FF6B6B">
+                    ${y3}
+                </span> years, 
+                <span class="age-number" data-value="${m3}" style="color: #4ECDC4">
+                    ${m3}
+                </span> months, and 
+                <span class="age-number" data-value="${d3}" style="color: #45B7D1">
+                    ${d3}
+                </span> days old
+            `;
+
+            document.getElementById('result').innerHTML = resultHTML;
+
+            // Enable particles after calculating age
+            enableParticles();
+
+            // Add event listeners to the numbers
+            document.querySelectorAll('.age-number').forEach(span => {
+                span.addEventListener('mousemove', function (e) {
+                    if (!particlesEnabled) return;
+
+                    const rect = this.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    const value = parseInt(this.dataset.value);
+                    const particleCount = Math.min(value, 5);
+
+                    for (let i = 0; i < particleCount; i++) {
+                        createParticle(
+                            e.clientX + (Math.random() - 0.5) * 20,
+                            e.clientY + (Math.random() - 0.5) * 20,
+                            this.style.color
+                        );
+                    }
+                });
+            });
+        }
+
+        function getDaysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+    </script>
+</body>
+
+</html>
